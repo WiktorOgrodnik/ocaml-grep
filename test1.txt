@@ -1,0 +1,6 @@
+hello
+gray|grey
+gr(a|e)y
+gr[ae]y
+\|gray
+gray\
