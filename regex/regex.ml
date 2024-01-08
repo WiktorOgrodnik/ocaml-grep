@@ -16,3 +16,8 @@ let search line handler _ =
   let tokens = Lexer.gen_tokens line in
   List.iter handler (List.map Token.string_of_token tokens)
 ;;
+
+let return_tokens line =
+  Lexer.gen_tokens line
+
+;;
