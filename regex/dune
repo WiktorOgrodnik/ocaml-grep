@@ -1,3 +1,8 @@
 (library
  (name regex)
- (libraries str base))
+ (libraries 
+   core
+   str)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane)))

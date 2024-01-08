@@ -1,11 +1,14 @@
-type node = (* -- Expression*)
-| SEQUENCE of atom list
-| ALTERNATIVE of atom list
+type group = (* -- Expression*)
+| SEQUENCE of group list
+| ALTERNATIVE of group list
+| LITERAL of char option
+
+(* and repeating_interval = 
+  { from  : int
+  ; to_   : int option
+  }
 
 and atom =
-| REPEATED of int * group
-| SINGLE   of group
-
-and group =
-| LITERAL of char option
-| NODE of node
+  { grp : group
+  ; rep : repeating_interval option
+  } *)
