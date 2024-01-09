@@ -1,7 +1,10 @@
+open! Core
+
 type group = (* -- Expression*)
 | SEQUENCE of group list
 | ALTERNATIVE of group list
 | LITERAL of char option
+[@@deriving sexp_of]
 
 (* and repeating_interval = 
   { from  : int

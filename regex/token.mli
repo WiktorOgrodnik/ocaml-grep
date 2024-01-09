@@ -1,3 +1,5 @@
+open! Core
+
 type t = 
 | LITERAL of char
 (* -- Operators *)
@@ -9,6 +11,7 @@ type t =
 | RPAREN
 (* | LBRACE
 | RBRACE *)
-[@@deriving sexp_of]
+[@@deriving sexp_of, eq]
 
 val string_of_token : t -> string
+val eq              : t -> t -> bool
