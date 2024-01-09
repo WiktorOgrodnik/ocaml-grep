@@ -113,6 +113,7 @@ let%expect_test "parse_alternative_gray|grey" =
      ((SEQUENCE ((LITERAL (g)) (LITERAL (r)) (LITERAL (a)) (LITERAL (y))))
       (SEQUENCE ((LITERAL (g)) (LITERAL (r)) (LITERAL (e)) (LITERAL (y)))))) |}]
 
+(* Przetestujmy jak sparsuje się '(gray|grey)' *)
 let%expect_test "parse_alternative_(gray|grey)" =
   let result = test_parse_common 7 in
   print_s [%sexp (result : Ast.group)];

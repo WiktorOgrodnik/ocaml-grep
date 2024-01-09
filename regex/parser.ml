@@ -1,4 +1,4 @@
-open! Core
+open Core
 open Or_error.Let_syntax
 
 type t = 
@@ -106,18 +106,16 @@ and parse_group parser =
 and parse_sequence parser =
   let tree = Ast.SEQUENCE [] in
   let rec parse_sequence_aux parser tree =
-    let%bind parser, tokens = parse_until_non_literal parser in
+    let%bind parser, tokens = parse_until_non_literal parser             in
+    let%bind tree           = add_literal_tokens_to_sequence tokens tree in
     match parser.current with
     | Some Token.LPAREN ->
-        let%bind tree              = add_literal_tokens_to_sequence tokens tree  in
         let%bind _                 = expect_token parser Token.RPAREN            in
         let%bind parser, tree_part = parse_group (advance parser)                in
         let%bind tree              = add_ast_to_sequence tree tree_part          in
         parse_sequence_aux (advance parser) tree
-    | Some Token.OR (* Only happens when sequence is demaned by alternative *)
-    | Some Token.RPAREN ->
-        let%bind tree              = add_literal_tokens_to_sequence tokens tree in
-        Ok (parser, tree)
+    | Some Token.OR (* Only happens when sequence is demanded by alternative *)
+    | Some Token.RPAREN -> Ok (parser, tree)
     | _ -> Or_error.error_string "Parse sequence: non literal token - unknown token"
   in
   let%bind parser, tree = parse_sequence_aux parser tree in
