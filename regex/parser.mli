@@ -20,4 +20,3 @@ val add_ast_to_sequence            : Ast.group -> Ast.group -> Ast.group Or_erro
 
 val parse                    : t -> Ast.group
 val parse_sequence           : t -> (t * Ast.group) Or_error.t
-

@@ -7,10 +7,11 @@ let examples = Array.of_list
 ; "gr(ae)y"
 ; "(gr)(ey)"
 ; "((gr)(ay))"
-; "(gr(ey)"]
-(* ; "gray|grey"
+; "(gr(ey)"
+; "gray|grey"
 ; "(gray|grey)"
-; "gr(a|e)y"] *)
+; "gr(a|e)y"
+; "gr(ab(t|y)ba|baab)wd(a|b)"]
 
 ;;
 
@@ -71,8 +72,7 @@ let%expect_test "parse_basic_(hello)" =
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
-     ((SEQUENCE
-       ((LITERAL (h)) (LITERAL (e)) (LITERAL (l)) (LITERAL (l)) (LITERAL (o)))))) |}]
+     ((LITERAL (h)) (LITERAL (e)) (LITERAL (l)) (LITERAL (l)) (LITERAL (o)))) |}]
 
 let%expect_test "parse_basic_gr(ae)y" =
   let result = test_parse_common 2 in
@@ -95,9 +95,8 @@ let%expect_test "parse_basic_((gr)(ey))" =
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
-     ((SEQUENCE
-       ((SEQUENCE ((LITERAL (g)) (LITERAL (r))))
-        (SEQUENCE ((LITERAL (a)) (LITERAL (y)))))))) |}]
+     ((SEQUENCE ((LITERAL (g)) (LITERAL (r))))
+      (SEQUENCE ((LITERAL (a)) (LITERAL (y)))))) |}]
 
 let%expect_test "parse_error_(gr(ey)" =
   let result = test_parse_common 5 in
@@ -105,3 +104,40 @@ let%expect_test "parse_error_(gr(ey)" =
   [%expect{|
     parse_until_non_literal - unexpected end
     (SEQUENCE ()) |}]
+
+let%expect_test "parse_alternative_gray|grey" =
+  let result = test_parse_common 6 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (ALTERNATIVE
+     ((SEQUENCE ((LITERAL (g)) (LITERAL (r)) (LITERAL (a)) (LITERAL (y))))
+      (SEQUENCE ((LITERAL (g)) (LITERAL (r)) (LITERAL (e)) (LITERAL (y)))))) |}]
+
+let%expect_test "parse_alternative_(gray|grey)" =
+  let result = test_parse_common 7 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (ALTERNATIVE
+     ((SEQUENCE ((LITERAL (g)) (LITERAL (r)) (LITERAL (a)) (LITERAL (y))))
+      (SEQUENCE ((LITERAL (g)) (LITERAL (r)) (LITERAL (e)) (LITERAL (y)))))) |}]
+
+let%expect_test "parse_alternative_gr(a|e)y" =
+  let result = test_parse_common 8 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (SEQUENCE
+     ((LITERAL (g)) (LITERAL (r)) (ALTERNATIVE ((LITERAL (a)) (LITERAL (e))))
+      (LITERAL (y)))) |}]
+
+let%expect_test "parse_alternative_gr(ab(t|y)ba|baab)wd(a|b)" =
+  let result = test_parse_common 9 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (SEQUENCE
+     ((LITERAL (g)) (LITERAL (r))
+      (ALTERNATIVE
+       ((SEQUENCE
+         ((LITERAL (a)) (LITERAL (b)) (ALTERNATIVE ((LITERAL (t)) (LITERAL (y))))
+          (LITERAL (b)) (LITERAL (a))))
+        (SEQUENCE ((LITERAL (b)) (LITERAL (a)) (LITERAL (a)) (LITERAL (b))))))
+      (LITERAL (w)) (LITERAL (d)) (ALTERNATIVE ((LITERAL (a)) (LITERAL (b)))))) |}]
