@@ -1,46 +1,25 @@
 open Core
+open Ast
 open Or_error.Let_syntax
 
 type t = 
   { tokens           : Token.t list
-  ; discarded_tokens : Token.t list
   ; current          : Token.t option
-  ; idx              : int
   } [@@deriving sexp_of]
 
 let advance parser =
-  match parser.tokens, parser.current with
-  | [], _             -> { tokens = []
-                         ; discarded_tokens = parser.discarded_tokens
-                         ; current = None
-                         ; idx = parser.idx + 1 }
-  | t :: ts, Some cur -> { tokens = ts
-                         ; discarded_tokens = cur :: parser.discarded_tokens
-                         ; current = Some t
-                         ; idx = parser.idx + 1 }
-  | t :: ts, None     -> { tokens = ts
-                         ; discarded_tokens = parser.discarded_tokens
-                         ; current = Some t
-                         ; idx = parser.idx + 1 }
+  match parser.tokens with
+  | []      -> { tokens = []
+               ; current = None}
+  | t :: ts -> { tokens = ts
+               ; current = Some t}
 
 let create_custom_parser tokens current =
   { tokens  = tokens
-  ; discarded_tokens = []
-  ; current = current
-  ; idx = 0
-  }
+  ; current = current}
 
 let init tokens =
   advance (create_custom_parser tokens None)
-
-let parse_until_non_literal parser =
-  let rec parse_unl_aux parser xs =
-    match parser.current with
-    | Some Token.LITERAL x -> parse_unl_aux (advance parser) (Token.LITERAL x :: xs)
-    | None                 -> Or_error.error_string "parse_until_non_literal - unexpected end"
-    | _                    -> Ok (parser, List.rev xs)
-  in
-  parse_unl_aux parser []
 
 let find_infix_same_nesting_level parser =
   let rec aux nesting parser =
@@ -52,21 +31,17 @@ let find_infix_same_nesting_level parser =
     | _                              -> aux nesting (advance parser)
   in aux 0 parser
 
+let is_current_token_repeater parser =
+  match parser.current with
+  | Some Token.STAR
+  | Some Token.PLUS -> true
+  | _               -> false
+
 let rec expect_token parser token =
   match parser.current with
   | Some t when (Token.eq t token) -> Ok parser
   | None -> Or_error.error_string "Token not found!"
   | _    -> expect_token (advance parser) token
-
-let literal_from_token token =
-  match token with
-  | Token.LITERAL c -> Ast.LITERAL (Some c)
-  | _               -> failwith "token is not literal"
-
-let add_literal_tokens_to_sequence tokens existing_sequence =
-  match existing_sequence with
-  | Ast.SEQUENCE lst -> Ok (Ast.SEQUENCE (List.append lst (List.map tokens ~f:literal_from_token)))
-  | _                -> Or_error.error_string "non sequence tree passed to build_sequence"
 
 let add_ast_to_sequence sequence ast =
   match sequence with
@@ -94,7 +69,7 @@ let rec parse parser =
   | Ok (_, tree) -> tree
   | Error err -> 
     print_endline (Error.to_string_hum err);
-    (Ast.SEQUENCE [])
+    Ast.INVALID
 
 and parse_group parser =
   let%bind token = find_infix_same_nesting_level parser in
@@ -106,32 +81,56 @@ and parse_group parser =
 and parse_sequence parser =
   let tree = Ast.SEQUENCE [] in
   let rec parse_sequence_aux parser tree =
-    let%bind parser, tokens = parse_until_non_literal parser             in
-    let%bind tree           = add_literal_tokens_to_sequence tokens tree in
     match parser.current with
+    | Some Token.LITERAL _ ->
+        let%bind parser, tree_part = parse_literal parser                                 in
+        let%bind tree              = add_ast_to_sequence tree tree_part                   in
+        parse_sequence_aux (advance parser) tree
     | Some Token.LPAREN ->
-        let%bind _                 = expect_token parser Token.RPAREN            in
-        let%bind parser, tree_part = parse_group (advance parser)                in
-        let%bind tree              = add_ast_to_sequence tree tree_part          in
+        let%bind _                 = expect_token parser Token.RPAREN                     in
+        let%bind parser, tree_part = parse_group (advance parser)                         in
+        let%bind tree              = add_ast_to_sequence tree tree_part                   in
         parse_sequence_aux (advance parser) tree
     | Some Token.OR (* Only happens when sequence is demanded by alternative *)
     | Some Token.RPAREN -> Ok (parser, tree)
-    | _ -> Or_error.error_string "Parse sequence: non literal token - unknown token"
+    | _ -> Or_error.error_string "Parse sequence: unknown token"
   in
   let%bind parser, tree = parse_sequence_aux parser tree in
   let%bind tree         = return_group tree              in
-  Ok (parser, tree)
+  parse_repeater parser tree
 
 and parse_alternative parser =
   let tree = Ast.ALTERNATIVE [] in
   let rec parse_alternative_aux parser tree =
-    let%bind parser, tree_part = parse_sequence parser in
-    let%bind tree              = add_ast_to_alternative tree tree_part in
+    let%bind parser, tree_part = parse_sequence parser                  in
+    let%bind tree              = add_ast_to_alternative tree tree_part  in
     match parser.current with
-    | Some Token.OR -> parse_alternative_aux (advance parser) tree
+    | Some Token.OR     -> parse_alternative_aux (advance parser) tree
     | Some Token.RPAREN -> Ok (parser, tree)
-    | _                 -> Or_error.error_string "Parse alternative: non literal token - unknown token"
+    | _                 -> Or_error.error_string "Parse alternative: unknown token"
   in
   let%bind parser, tree = parse_alternative_aux parser tree in
   let%bind tree         = return_group tree                 in
-  Ok (parser, tree)
+  parse_repeater parser tree
+
+and parse_literal parser =
+  let%bind parser, tree = match parser.current with
+  | Some Token.LITERAL c -> Ok (parser, Ast.LITERAL (Some c))
+  | _                    -> Or_error.error_string "Parse literal: unknown token"
+  in
+  parse_repeater parser tree
+
+and parse_repeater parser tree =
+  let parser_repeater_aux parser =
+    match parser.current with
+    | Some Token.STAR -> Ok (parser, Ast.REPEATER (tree, { l = Some 0
+                                                         ; r = None }))
+    | Some Token.PLUS -> Ok (parser, Ast.REPEATER (tree, { l = Some 1
+                                                         ; r = None }))
+    | _               -> Or_error.error_string "Parse repeater: unknown token"
+  in
+  match is_current_token_repeater (advance parser) with
+  | true  -> parser_repeater_aux (advance parser)
+  | false -> Ok (parser, tree)
+
+;;

@@ -1,17 +1,14 @@
 open! Core
 
 type group = (* -- Expression*)
+| INVALID (* -- Return when error detected *)
 | SEQUENCE of group list
 | ALTERNATIVE of group list
 | LITERAL of char option
+| REPEATER of group * repeating
 [@@deriving sexp_of]
 
-(* and repeating_interval = 
-  { from  : int
-  ; to_   : int option
-  }
-
-and atom =
-  { grp : group
-  ; rep : repeating_interval option
-  } *)
+and repeating = { l : int option
+                ; r : int option
+                }
+[@@deriving sexp_of]

@@ -2,7 +2,8 @@ open! Core
 open Parser
 
 let examples = Array.of_list
-[ "hello"
+[ "a"
+; "hello"
 ; "(hello)"
 ; "gr(ae)y"
 ; "(gr)(ey)"
@@ -11,48 +12,14 @@ let examples = Array.of_list
 ; "gray|grey"
 ; "(gray|grey)"
 ; "gr(a|e)y"
-; "gr(ab(t|y)ba|baab)wd(a|b)"]
+; "gr(ab(t|y)ba|baab)wd(a|b)"
+; "abb+c"
+; "ab(ba)+c"
+; "(a|b)b++c"
+; "\\++"
+; "\\+*"]
 
 ;;
-
-let%expect_test "check_parse_until_non_literal_with_literals_only" =
-  let tokens =
-  [[ Token.LITERAL 'g'
-   ; Token.LITERAL 'r'
-   ; Token.LITERAL 'a'
-   ; Token.LITERAL 'y'
-   ; Token.RPAREN]] in
-  let parsers = List.map tokens ~f:(init) in
-  let results = List.map parsers ~f:parse_until_non_literal in
-  print_s [%sexp (results : (t * Token.t list) Or_error.t list)];
-  [%expect{|
-    ((Ok
-      (((tokens ())
-        (discarded_tokens ((LITERAL y) (LITERAL a) (LITERAL r) (LITERAL g)))
-        (current (RPAREN)) (idx 5))
-       ((LITERAL g) (LITERAL r) (LITERAL a) (LITERAL y))))) |}]
-
-let%expect_test "check_parse_until_non_literal" =
-  let tokens =
-  [[ Token.LITERAL 'g'
-   ; Token.LITERAL 'r'
-   ; Token.LITERAL 'a'
-   ; Token.LITERAL 'y'
-   ; Token.OR
-   ; Token.LITERAL 'g'
-   ; Token.LITERAL 'r'
-   ; Token.LITERAL 'e'
-   ; Token.LITERAL 'y'
-   ; Token.RPAREN]] in
-  let parsers = List.map tokens ~f:(init) in
-  let results = List.map parsers ~f:parse_until_non_literal in
-  print_s [%sexp (results : (t * Token.t list) Or_error.t list)];
-  [%expect{|
-    ((Ok
-      (((tokens ((LITERAL g) (LITERAL r) (LITERAL e) (LITERAL y) RPAREN))
-        (discarded_tokens ((LITERAL y) (LITERAL a) (LITERAL r) (LITERAL g)))
-        (current (OR)) (idx 5))
-       ((LITERAL g) (LITERAL r) (LITERAL a) (LITERAL y))))) |}]
 
 let test_parse_common n =
   let string = Array.get examples n in
@@ -60,22 +27,28 @@ let test_parse_common n =
   let parser = init tokens in
   parse parser
 
-let%expect_test "parse_basic_hello" =
+let%expect_test "parse_basic_a" =
   let result = test_parse_common 0 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
-    (SEQUENCE
-     ((LITERAL (h)) (LITERAL (e)) (LITERAL (l)) (LITERAL (l)) (LITERAL (o)))) |}]
+    (LITERAL (a)) |}]
 
-let%expect_test "parse_basic_(hello)" =
+let%expect_test "parse_basic_hello" =
   let result = test_parse_common 1 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
      ((LITERAL (h)) (LITERAL (e)) (LITERAL (l)) (LITERAL (l)) (LITERAL (o)))) |}]
 
-let%expect_test "parse_basic_gr(ae)y" =
+let%expect_test "parse_basic_(hello)" =
   let result = test_parse_common 2 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (SEQUENCE
+     ((LITERAL (h)) (LITERAL (e)) (LITERAL (l)) (LITERAL (l)) (LITERAL (o)))) |}]
+
+let%expect_test "parse_basic_gr(ae)y" =
+  let result = test_parse_common 3 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
@@ -83,7 +56,7 @@ let%expect_test "parse_basic_gr(ae)y" =
       (LITERAL (y)))) |}]
 
 let%expect_test "parse_basic_(gr)(ey)" =
-  let result = test_parse_common 3 in
+  let result = test_parse_common 4 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
@@ -91,7 +64,7 @@ let%expect_test "parse_basic_(gr)(ey)" =
       (SEQUENCE ((LITERAL (e)) (LITERAL (y)))))) |}]
 
 let%expect_test "parse_basic_((gr)(ey))" =
-  let result = test_parse_common 4 in
+  let result = test_parse_common 5 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
@@ -99,14 +72,14 @@ let%expect_test "parse_basic_((gr)(ey))" =
       (SEQUENCE ((LITERAL (a)) (LITERAL (y)))))) |}]
 
 let%expect_test "parse_error_(gr(ey)" =
-  let result = test_parse_common 5 in
+  let result = test_parse_common 6 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
-    parse_until_non_literal - unexpected end
-    (SEQUENCE ()) |}]
+    Parse sequence: unknown token
+    INVALID |}]
 
 let%expect_test "parse_alternative_gray|grey" =
-  let result = test_parse_common 6 in
+  let result = test_parse_common 7 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (ALTERNATIVE
@@ -115,7 +88,7 @@ let%expect_test "parse_alternative_gray|grey" =
 
 (* Przetestujmy jak sparsuje się '(gray|grey)' *)
 let%expect_test "parse_alternative_(gray|grey)" =
-  let result = test_parse_common 7 in
+  let result = test_parse_common 8 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (ALTERNATIVE
@@ -123,7 +96,7 @@ let%expect_test "parse_alternative_(gray|grey)" =
       (SEQUENCE ((LITERAL (g)) (LITERAL (r)) (LITERAL (e)) (LITERAL (y)))))) |}]
 
 let%expect_test "parse_alternative_gr(a|e)y" =
-  let result = test_parse_common 8 in
+  let result = test_parse_common 9 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
@@ -131,7 +104,7 @@ let%expect_test "parse_alternative_gr(a|e)y" =
       (LITERAL (y)))) |}]
 
 let%expect_test "parse_alternative_gr(ab(t|y)ba|baab)wd(a|b)" =
-  let result = test_parse_common 9 in
+  let result = test_parse_common 10 in
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (SEQUENCE
@@ -142,3 +115,39 @@ let%expect_test "parse_alternative_gr(ab(t|y)ba|baab)wd(a|b)" =
           (LITERAL (b)) (LITERAL (a))))
         (SEQUENCE ((LITERAL (b)) (LITERAL (a)) (LITERAL (a)) (LITERAL (b))))))
       (LITERAL (w)) (LITERAL (d)) (ALTERNATIVE ((LITERAL (a)) (LITERAL (b)))))) |}]
+
+let%expect_test "parse_plus_abb+c" =
+  let result = test_parse_common 11 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (SEQUENCE
+     ((LITERAL (a)) (LITERAL (b)) (REPEATER (LITERAL (b)) ((l (1)) (r ())))
+      (LITERAL (c)))) |}]
+
+let%expect_test "parse_plus_ab(ba)+c" =
+  let result = test_parse_common 12 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (SEQUENCE
+     ((LITERAL (a)) (LITERAL (b))
+      (REPEATER (SEQUENCE ((LITERAL (b)) (LITERAL (a)))) ((l (1)) (r ())))
+      (LITERAL (c)))) |}]
+
+let%expect_test "parse_plus_(a|b)b++c" =
+  let result = test_parse_common 13 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    Parse sequence: unknown token
+    INVALID |}]
+
+let%expect_test "parse_plus_\\++" =
+  let result = test_parse_common 14 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (REPEATER (LITERAL (+)) ((l (1)) (r ()))) |}]
+
+let%expect_test "parse_plus_\\+*" =
+  let result = test_parse_common 15 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (REPEATER (LITERAL (+)) ((l (0)) (r ()))) |}]

@@ -28,12 +28,14 @@ let next_char lxr = match lxr.ch with
 | None -> (lxr, None)
 | Some c -> match c with
   | '|'    -> (read_char lxr, Some Token.OR)
-  (* | '*'    -> (read_char lxr, Some Token.STAR) *)
-  (* | '+'    -> (read_char lxr, Some Token.PLUS) *)
+  | '*'    -> (read_char lxr, Some Token.STAR)
+  | '+'    -> (read_char lxr, Some Token.PLUS)
   | '('    -> (read_char lxr, Some Token.LPAREN)
   | ')'    -> (read_char lxr, Some Token.RPAREN)
   (* | '['    -> (read_char lxr, Some Token.LBRACE) *)
   (* | ']'    -> (read_char lxr, Some Token.RBRACE) *)
+  (* | '{'    -> (read_char lxr, Some Token.LCLAM) *)
+  (* | '}'    -> (read_char lxr, Some Token.RCLAM) *)
   | '\\'   -> begin
       let lxr = read_char lxr in (* skip \ and treat next char as literal *)
       match lxr.ch with
