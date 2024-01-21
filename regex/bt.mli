@@ -1,6 +1,7 @@
 open Core
 
-type 'a t
+type 'a t = 'a Sequence.t
+[@@deriving sexp_of]
 
 val return : 'a -> 'a t
 val bind   : 'a t -> ('a -> 'b t) -> 'b t

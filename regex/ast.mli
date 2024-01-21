@@ -12,3 +12,6 @@ and repeating = { l : int option
                 ; r : int option
                 }
 [@@deriving sexp_of]
+
+val to_string   : group -> string
+val seq_get_elt : group -> (group * group) option
