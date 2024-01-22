@@ -10,9 +10,9 @@ type t =
 let advance parser =
   match parser.tokens with
   | []      -> { tokens = []
-               ; current = None}
+               ; current = None }
   | t :: ts -> { tokens = ts
-               ; current = Some t}
+               ; current = Some t }
 
 let create_custom_parser tokens current =
   { tokens  = tokens
@@ -63,15 +63,7 @@ let return_group sequence =
   end
   | _                   -> Or_error.error_string "Return group: expected Ast.SEQUENCE or Ast.ALTERNATIVE"
 
-let rec parse parser =
-  let result = parse_group parser in
-  match result with
-  | Ok (_, tree) -> tree
-  | Error err -> 
-    print_endline (Error.to_string_hum err);
-    Ast.INVALID
-
-and parse_group parser =
+let rec parse_group parser =
   let%bind token = find_infix_same_nesting_level parser in
   match token with
   | Some Token.OR -> parse_alternative parser
@@ -133,4 +125,16 @@ and parse_repeater parser tree =
   | true  -> parser_repeater_aux (advance parser)
   | false -> Ok (parser, tree)
 
-;;
+let parse_einv parser =
+  let result = parse_group parser in
+  match result with
+  | Ok (_, tree) -> tree
+  | Error err -> 
+    print_endline (Error.to_string_hum err);
+    Ast.INVALID
+
+let parse parser =
+  let result = parse_group parser in
+  match result with
+  | Ok (_, tree) -> Ok tree
+  | Error err    -> Error err

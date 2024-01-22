@@ -1,5 +1,4 @@
 open! Core
-open Parser
 
 let examples = Array.of_list
 [ "a"
@@ -22,10 +21,10 @@ let examples = Array.of_list
 ;;
 
 let test_parse_common n =
-  let string = Array.get examples n in
+  let string = Array.get examples n    in
   let tokens = Lexer.gen_tokens string in
-  let parser = init tokens in
-  parse parser
+  let parser = Parser.init tokens      in
+  Parser.parse_einv parser
 
 let%expect_test "parse_basic_a" =
   let result = test_parse_common 0 in

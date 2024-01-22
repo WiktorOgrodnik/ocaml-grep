@@ -15,8 +15,11 @@ val add_ast_to_alternative   : Ast.group -> Ast.group -> Ast.group Or_error.t
 
 val return_group             : Ast.group -> Ast.group Or_error.t
 
-val parse                    : t -> Ast.group
+val parse_group              : t -> (t * Ast.group) Or_error.t
 val parse_sequence           : t -> (t * Ast.group) Or_error.t
 val parse_alternative        : t -> (t * Ast.group) Or_error.t
 val parse_literal            : t -> (t * Ast.group) Or_error.t
 val parse_repeater           : t -> Ast.group -> (t * Ast.group) Or_error.t
+
+val parse_einv               : t -> Ast.group
+val parse                    : t -> Ast.group Or_error.t

@@ -16,12 +16,11 @@ let examples = Array.of_list
 ;;
 
 let test_parse_common n =
-  let pattern, string = Array.get examples n in
-  let tokens = Lexer.gen_tokens pattern      in
-  let parser = Parser.init tokens            in
-  let ast    = Parser.parse parser           in
-  let m      = Eval.search string ast        in
-  m
+  let pattern, string = Array.get examples n     in
+  let tokens          = Lexer.gen_tokens pattern in
+  let parser          = Parser.init tokens       in
+  let ast             = Parser.parse_einv parser in
+  Eval.search string ast
 
 let%expect_test "eval_test_1" =
   let result = test_parse_common 0 in
