@@ -1,8 +1,39 @@
-let print_line line =
-  print_endline line
-;;
+open Core
+open ANSITerminal
 
-let usage_msg = "Usage: " ^ Sys.argv.(0) ^ " [options] -F file_path -P pattern" 
+(* let print_locations locations =
+  let rec pr_aux loc =
+    match loc with
+    | c :: cx ->
+      print_string [] ("(" ^ (string_of_int (fst c)) ^ ", " ^ (string_of_int (snd c)) ^ ") ");
+      pr_aux cx
+    | [] -> ()
+  in
+  pr_aux locations;
+  print_endline "" *)
+
+let print_line line locations =
+  let idx_in idx xs =
+    List.fold 
+      (List.map xs ~f:(fun (l, r) -> l <= idx && idx <= r)) 
+    ~init:false ~f:(||)
+  in  
+  let rec print_char_aux idx linex =
+    match linex with
+    | c :: cx ->
+        let styles =
+          if (idx_in idx locations) then 
+            [Foreground Red]
+          else 
+            [Foreground Default]
+        in
+        print_string styles (String.make 1 c);
+        print_char_aux (idx + 1) cx 
+    | []      -> print_endline ""
+  in
+  print_char_aux 0 (String.to_list line)
+
+let usage_msg = "Usage: " ^ " [options] -F file_path -P pattern" 
 let show_help = ref false
 let file_path = ref ""
 let pattern   = ref ""
@@ -13,17 +44,12 @@ let speclist =
   (("-P",     Arg.Set_string pattern,   "Regex pattern"));]
 
 let grep_main fp process pattern =
-  let chn = open_in fp in
+  let chn = In_channel.create fp in
   let rec rl () =
-    try
-      let line = input_line chn in
-      Regex.search line process pattern;
-      print_endline "STOP!";
-      rl ()
-    with
-    | End_of_file -> close_in chn
+    match In_channel.input_line chn with
+    | Some line -> Regex.search line process pattern; rl ()
+    | None      -> ()
   in rl ()
-;;
 
 let () =
   Arg.parse speclist (fun _ -> ()) usage_msg;
@@ -34,5 +60,3 @@ let () =
   end;
 
   grep_main !file_path print_line !pattern
-
-;;
