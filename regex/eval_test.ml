@@ -12,7 +12,8 @@ let examples = Array.of_list
 ; "abac*",         "abaccccd"
 ; "c(ab)+",        "cabbabab"
 ; "c(ab)+",        "cabababc"
-; "c+",            "ca"] 
+; "c+",            "ca"
+; "(ba){2}",       "baba"]
 ;;
 
 let test_parse_common n =
@@ -55,7 +56,7 @@ let%expect_test "eval_test_6" =
 let%expect_test "eval_test_7" =
   let result = test_parse_common 6 in
   print_s [%sexp (result : (int * int) list)];
-  [%expect{| ((9 9) (8 9) (7 9) (6 9) (5 9) (4 9) (3 9) (2 9)) |}]
+  [%expect{| ((2 9)) |}]
 
 let%expect_test "eval_test_8" =
   let result = test_parse_common 7 in
@@ -81,3 +82,8 @@ let%expect_test "eval_test_12" =
   let result = test_parse_common 11 in
   print_s [%sexp (result : (int * int) list)];
   [%expect{| ((0 0)) |}]
+
+let%expect_test "eval_test_13" =
+let result = test_parse_common 12 in
+print_s [%sexp (result : (int * int) list)];
+[%expect{| ((0 3)) |}]

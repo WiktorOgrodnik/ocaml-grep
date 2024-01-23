@@ -78,6 +78,6 @@ let search text pattern =
       let res = search_ast text pattern pos in
       match Sequence.max_elt res ~compare:(Int.compare) with
       | None   -> search_aux (pos + 1) xs
-      | Some t -> search_aux (pos + 1) ((pos, t) :: xs)
+      | Some t -> search_aux (t + 1) ((pos, t) :: xs)
   in
   search_aux 0 []

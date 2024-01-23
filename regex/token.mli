@@ -11,8 +11,10 @@ type t =
 | RPAREN
 (* | LBRACE *)
 (* | RBRACE *)
-(* | LCLAM *)
-(* | RCLAM *)
+| LCLAM
+| RCLAM
+(* -- Other *)
+| COMMA
 [@@deriving sexp_of, eq]
 
 val string_of_token : t -> string

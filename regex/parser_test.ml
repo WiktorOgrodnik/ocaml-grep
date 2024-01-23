@@ -16,7 +16,13 @@ let examples = Array.of_list
 ; "ab(ba)+c"
 ; "(a|b)b++c"
 ; "\\++"
-; "\\+*"]
+; "\\+*"
+; "a{2}"
+; "(ab){3, 5}"
+; "a{1,123}"
+; "(abc|nana){5}"
+; "ttt{4}"
+; "(abc|nana)*"]
 
 ;;
 
@@ -150,3 +156,46 @@ let%expect_test "parse_plus_\\+*" =
   print_s [%sexp (result : Ast.group)];
   [%expect{|
     (REPEATER (LITERAL (+)) ((l (0)) (r ()))) |}]
+
+let%expect_test "parse_repeater_ext0" =
+  let result = test_parse_common 16 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{| (REPEATER (LITERAL (a)) ((l (2)) (r (2)))) |}]
+
+let%expect_test "parse_repeater_ext1" =
+  let result = test_parse_common 17 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (REPEATER (SEQUENCE ((LITERAL (a)) (LITERAL (b)))) ((l (3)) (r (5)))) |}]
+
+let%expect_test "parse_repeater_ext2" =
+  let result = test_parse_common 18 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{| (REPEATER (LITERAL (a)) ((l (1)) (r (123)))) |}]
+
+let%expect_test "parse_repeater_ext3" =
+  let result = test_parse_common 19 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (REPEATER
+     (ALTERNATIVE
+      ((SEQUENCE ((LITERAL (a)) (LITERAL (b)) (LITERAL (c))))
+       (SEQUENCE ((LITERAL (n)) (LITERAL (a)) (LITERAL (n)) (LITERAL (a))))))
+     ((l (5)) (r (5)))) |}]
+
+let%expect_test "parse_repeater_ext4" =
+  let result = test_parse_common 20 in
+  print_s [%sexp (result : Ast.group)];
+  [%expect{|
+    (SEQUENCE
+     ((LITERAL (t)) (LITERAL (t)) (REPEATER (LITERAL (t)) ((l (4)) (r (4)))))) |}]
+
+let%expect_test "parse_repeater_ext5" =
+let result = test_parse_common 21 in
+print_s [%sexp (result : Ast.group)];
+[%expect{|
+  (REPEATER
+   (ALTERNATIVE
+    ((SEQUENCE ((LITERAL (a)) (LITERAL (b)) (LITERAL (c))))
+     (SEQUENCE ((LITERAL (n)) (LITERAL (a)) (LITERAL (n)) (LITERAL (a))))))
+   ((l (0)) (r ()))) |}]

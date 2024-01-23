@@ -33,8 +33,9 @@ let next_char lxr = match lxr.current with
   | ')'    -> (advance lxr, Some Token.RPAREN)
   (* | '['    -> (advance lxr, Some Token.LBRACE) *)
   (* | ']'    -> (advance lxr, Some Token.RBRACE) *)
-  (* | '{'    -> (advance lxr, Some Token.LCLAM) *)
-  (* | '}'    -> (advance lxr, Some Token.RCLAM) *)
+  | '{'    -> (advance lxr, Some Token.LCLAM)
+  | '}'    -> (advance lxr, Some Token.RCLAM)
+  | ','    -> (advance lxr, Some Token.COMMA)
   | '\\'   -> begin
       let lxr = advance lxr in (* skip \ and treat next char as literal *)
       match lxr.current with
@@ -49,4 +50,8 @@ let gen_tokens i =
     match next_char lxr with
     | (_, None) -> List.rev_append ts [Token.RPAREN]
     | (l, Some t) -> gen l (t :: ts)
-  in gen lxr []
+  in 
+  let tokesn = gen lxr [] in
+  match tokesn with
+  | Token.RPAREN :: [] -> []
+  | tok -> tok

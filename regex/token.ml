@@ -11,10 +11,10 @@ type t =
 | RPAREN
 (* | LBRACE *)
 (* | RBRACE *)
-(* | LCLAM *)
-(* | RCLAM *)
+| LCLAM
+| RCLAM
 (* -- Others*)
-(* | COMMA *)
+| COMMA
 [@@deriving sexp_of, eq]
 
 let string_of_token = function
@@ -26,9 +26,9 @@ let string_of_token = function
   | RPAREN    -> "RPAREN"
   (* | LBRACE    -> "LBRACE" *)
   (* | RBRACE    -> "RBRACE" *)
-  (* | LCLAM     -> "LCLAM" *)
-  (* | RCLAM     -> "RCLAM" *)
-  (* | COMMA     -> "COMMA" *)
+  | LCLAM     -> "LCLAM"
+  | RCLAM     -> "RCLAM"
+  | COMMA     -> "COMMA"
 
 let eq a b =
   match a, b with
@@ -36,6 +36,9 @@ let eq a b =
   | PLUS, PLUS
   | STAR, STAR
   | LPAREN, LPAREN
-  | RPAREN, RPAREN -> true
+  | RPAREN, RPAREN
+  | LCLAM, LCLAM
+  | RCLAM, RCLAM
+  | COMMA, COMMA -> true
   | LITERAL c1, LITERAL c2 when int_of_char c1 = int_of_char c2 -> true
   | _ -> false

@@ -71,5 +71,5 @@ let () =
   end;
 
   match pattern with
-  | None -> show_help_msg()
+  | None -> ()
   | Some pattern -> main_aux pattern files
