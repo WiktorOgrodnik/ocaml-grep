@@ -2,10 +2,12 @@ open! Core
 
 type t = 
 | LITERAL of char
+| DOT
 (* -- Operators *)
 | OR
 | STAR
 | PLUS
+| QMARK
 (* -- Brackets*)
 | LPAREN
 | RPAREN
@@ -19,9 +21,11 @@ type t =
 
 let string_of_token = function
   | LITERAL c -> "LITERAL (" ^ String.make 1 c ^ ")"
+  | DOT       -> "DOT"
   | OR        -> "OR"
   | STAR      -> "STAR"
   | PLUS      -> "PLUS"
+  | QMARK     -> "QMRARK"
   | LPAREN    -> "LPAREN"
   | RPAREN    -> "RPAREN"
   (* | LBRACE    -> "LBRACE" *)
@@ -33,8 +37,10 @@ let string_of_token = function
 let eq a b =
   match a, b with
   | OR, OR
+  | DOT, DOT
   | PLUS, PLUS
   | STAR, STAR
+  | QMARK, QMARK
   | LPAREN, LPAREN
   | RPAREN, RPAREN
   | LCLAM, LCLAM

@@ -35,6 +35,7 @@ let is_current_token_repeater parser =
   match parser.current with
   | Some Token.STAR
   | Some Token.PLUS
+  | Some Token.QMARK
   | Some Token.LCLAM -> true
   | _                -> false
 
@@ -115,6 +116,7 @@ and parse_sequence parser from_or =
   let tree = Ast.SEQUENCE [] in
   let rec parse_sequence_aux parser tree =
     match parser.current with
+    | Some Token.DOT
     | Some Token.LITERAL _ ->
         let%bind parser, tree_part = parse_literal parser                                 in
         let%bind tree              = add_ast_to_sequence tree tree_part                   in
@@ -151,6 +153,7 @@ and parse_alternative parser =
 and parse_literal parser =
   let%bind parser, tree = match parser.current with
   | Some Token.LITERAL c -> Ok (parser, Ast.LITERAL (Some c))
+  | Some Token.DOT       -> Ok (parser, Ast.LITERAL None)
   | _                    -> Or_error.error_string "Parse literal: unknown token"
   in
   parse_repeater parser tree
@@ -162,6 +165,8 @@ and parse_repeater parser tree =
                                                            ; r = None }))
     | Some Token.PLUS   -> Ok (parser, Ast.REPEATER (tree, { l = Some 1
                                                            ; r = None }))
+    | Some Token.QMARK  -> Ok (parser, Ast.REPEATER (tree, { l = Some 0
+                                                           ; r = Some 1 }))
     | Some Token.LCLAM  ->
         let%bind _ = expect_token parser Token.RCLAM in
         parse_clam_repeater (advance parser) tree

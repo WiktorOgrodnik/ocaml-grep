@@ -36,6 +36,8 @@ let next_char lxr = match lxr.current with
   | '{'    -> (advance lxr, Some Token.LCLAM)
   | '}'    -> (advance lxr, Some Token.RCLAM)
   | ','    -> (advance lxr, Some Token.COMMA)
+  | '?'    -> (advance lxr, Some Token.QMARK)
+  | '.'    -> (advance lxr, Some Token.DOT)
   | '\\'   -> begin
       let lxr = advance lxr in (* skip \ and treat next char as literal *)
       match lxr.current with

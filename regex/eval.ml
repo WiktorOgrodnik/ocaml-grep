@@ -77,7 +77,8 @@ let search text pattern =
     else
       let res = search_ast text pattern pos in
       match Sequence.max_elt res ~compare:(Int.compare) with
-      | None   -> search_aux (pos + 1) xs
-      | Some t -> search_aux (t + 1) ((pos, t) :: xs)
+      | None                -> search_aux (pos + 1) xs
+      | Some t when t < pos -> search_aux (pos + 1) ((-1, -1) :: xs)
+      | Some t              -> search_aux (t + 1) ((pos, t) :: xs)
   in
   search_aux 0 []
