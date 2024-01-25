@@ -1,6 +1,10 @@
 open Core
 open ANSITerminal
 
+type ftype =
+| File   of string
+| Stream of In_channel.t
+
 let print_line line locations =
   let idx_in idx xs =
     List.fold 
@@ -29,20 +33,16 @@ let speclist =
 let show_help_msg () =
   print_endline usage_msg
 
-let grep_main fp process pattern =
-  try
-    let chn = In_channel.create fp in
-    let rec rl () =
-      match In_channel.input_line chn with
-      | Some line -> 
-          begin match Regex.search line process pattern with
-          | Ok _ -> rl ()
-          | Error err -> print_endline (Error.to_string_hum err)
-          end
-      | None      -> In_channel.close chn
-    in rl ()
-  with
-  | Sys_error _ -> print_endline ("Cannot open file: " ^ fp)
+let grep_main chn process pattern =
+  let rec rl () =
+    match In_channel.input_line chn with
+    | Some line -> 
+      begin match Regex.search line process pattern with
+      | Ok _ -> rl ()
+      | Error err -> print_endline (Error.to_string_hum err)
+      end
+    | None      -> In_channel.close chn
+  in rl ()
 
 let get_pattern () =
   try
@@ -51,25 +51,40 @@ let get_pattern () =
   | Invalid_argument _ -> show_help := true; None
 
 let get_files () =
-  let files = Array.to_list (Sys.get_argv ()) in
+  let files = Array.to_list (Sys.get_argv ())       in
   List.drop files 2
 
 let () =
   let pattern = get_pattern () in
   let files   = get_files   () in
+  let files_m = if List.is_empty files 
+    then [Stream In_channel.stdin]
+    else List.map files ~f:(fun a -> File a)
+  in
   let rec main_aux pattern files =
     match files with
     | f :: xf ->
-        grep_main f print_line pattern;
-        main_aux  pattern xf
+      begin match f with
+        | File f     ->
+          begin try
+            let chn = In_channel.create f in
+            grep_main chn print_line pattern;
+            main_aux pattern xf
+          with
+          | Sys_error _ -> print_endline ("Cannot open file: " ^ f)
+          end
+        | Stream chn ->
+          grep_main chn print_line pattern;
+          main_aux pattern xf
+      end
     | [] -> ()
   in
   Arg.parse speclist (fun _ -> ()) usage_msg;
 
-  if !show_help || (List.is_empty files) then begin
+  if !show_help then begin
     show_help_msg (); exit 0;
   end;
 
   match pattern with
   | None -> ()
-  | Some pattern -> main_aux pattern files
+  | Some pattern -> main_aux pattern files_m
