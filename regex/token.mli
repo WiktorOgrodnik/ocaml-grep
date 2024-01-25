@@ -11,13 +11,15 @@ type t =
 (* -- Brackets *)
 | LPAREN
 | RPAREN
-(* | LBRACE *)
-(* | RBRACE *)
+| LBRACE
+| RBRACE
 | LCLAM
 | RCLAM
 (* -- Other *)
 | COMMA
-[@@deriving sexp_of, eq]
+| DASH
+[@@deriving sexp_of]
 
-val string_of_token : t -> string
-val eq              : t -> t -> bool
+val to_string        : t -> string
+val to_string_option : t option -> string
+val eq               : t -> t -> bool

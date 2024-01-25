@@ -14,6 +14,9 @@ let advance parser =
   | t :: ts -> { tokens = ts
                ; current = Some t }
 
+let error_invalid_token_option str token =
+  Or_error.error_string (str ^ " - invalid token: " ^ (Token.to_string_option token)) 
+
 let create_custom_parser tokens current =
   { tokens  = tokens
   ; current = current}
@@ -45,6 +48,15 @@ let rec expect_token parser token =
   | None -> Or_error.error_string "Token not found!"
   | _    -> expect_token (advance parser) token
 
+let when_to_expect_token parser token =
+  let rec when_aux parser count =
+    match parser.current with
+    | Some t when (Token.eq t token) -> count
+    | None -> 0
+    | _    -> when_aux (advance parser) (count + 1)
+  in
+  when_aux parser 0
+
 let add_ast_to_sequence sequence ast =
   match sequence with
   | Ast.SEQUENCE lst -> Ok (Ast.SEQUENCE (List.append lst [ast]))
@@ -71,6 +83,12 @@ let add_number_to_repeater tree number =
      end
   | _ -> Or_error.error_string "Parse clam repeater: illeagal Ast passed to the function add_number_to_repeater"
 
+let add_char_to_range_data data c =
+  match data with
+  | None, None   -> Ok ((Some c, None), true)
+  | Some a, None -> Ok ((Some a, Some c), false)
+  | _            -> Or_error.error_string "Range already completed!"
+
 let repeater_is_comma_legal tree =
   match tree with
   | Ast.REPEATER (_, r) ->
@@ -90,6 +108,12 @@ let normalize_clam_repeater tree =
       end
   | _ -> Or_error.error_string "Parse clam repeater: illeagal Ast passed to the function repeater_is_comma_legal"
 
+let range_is_dash_legal data =
+  match data with
+  | None, None
+  | Some _, None -> Ok (())
+  | _            -> Or_error.error_string "To many dashes in one range"
+
 let return_group sequence =
   match sequence with
   | Ast.ALTERNATIVE lst
@@ -97,7 +121,7 @@ let return_group sequence =
     | []                -> Or_error.error_string "Empty Sequence or Alternative"
     | x :: []           -> Ok x
     | _                 -> Ok sequence
-  end
+    end
   | _                   -> Or_error.error_string "Return group: expected Ast.SEQUENCE or Ast.ALTERNATIVE"
 
 let rec skip_whitespaces parser =
@@ -109,26 +133,31 @@ let rec parse_group parser =
   let%bind token = find_infix_same_nesting_level parser in
   match token with
   | Some Token.OR -> parse_alternative parser
-  | None          -> parse_sequence parser false
-  | _             -> Or_error.error_string "Parse group: infix operator - unknown token"
+  | None          -> parse_sequence parser
+  | _             -> error_invalid_token_option "Infix operator" token
 
-and parse_sequence parser from_or =
+and parse_sequence ?(from_or = false) parser =
   let tree = Ast.SEQUENCE [] in
   let rec parse_sequence_aux parser tree =
     match parser.current with
     | Some Token.DOT
     | Some Token.LITERAL _ ->
-        let%bind parser, tree_part = parse_literal parser                                 in
-        let%bind tree              = add_ast_to_sequence tree tree_part                   in
+        let%bind parser, tree_part = parse_literal parser                    in
+        let%bind tree              = add_ast_to_sequence tree tree_part      in
         parse_sequence_aux (advance parser) tree
     | Some Token.LPAREN ->
-        let%bind _                 = expect_token parser Token.RPAREN                     in
-        let%bind parser, tree_part = parse_group (advance parser)                         in
-        let%bind tree              = add_ast_to_sequence tree tree_part                   in
+        let%bind _                 = expect_token parser Token.RPAREN        in
+        let%bind parser, tree_part = parse_group (advance parser)            in
+        let%bind tree              = add_ast_to_sequence tree tree_part      in
+        parse_sequence_aux (advance parser) tree
+    | Some Token.LBRACE ->
+        let%bind _                 = expect_token parser Token.RBRACE        in
+        let%bind parser, tree_part = parse_char_alternative (advance parser) in
+        let%bind tree              = add_ast_to_sequence tree tree_part      in
         parse_sequence_aux (advance parser) tree
     | Some Token.OR (* Only happens when sequence is demanded by alternative *)
     | Some Token.RPAREN -> Ok (parser, tree)
-    | _ -> Or_error.error_string "Parse sequence: unknown token"
+    | _ -> error_invalid_token_option "Parse sequence" parser.current
   in
   let%bind parser, tree = parse_sequence_aux parser tree in
   let%bind tree         = return_group tree              in
@@ -139,27 +168,29 @@ and parse_sequence parser from_or =
 and parse_alternative parser =
   let tree = Ast.ALTERNATIVE [] in
   let rec parse_alternative_aux parser tree =
-    let%bind parser, tree_part = parse_sequence parser true             in
+    let%bind parser, tree_part = parse_sequence ~from_or:true parser    in
     let%bind tree              = add_ast_to_alternative tree tree_part  in
     match parser.current with
     | Some Token.OR     -> parse_alternative_aux (advance parser) tree
     | Some Token.RPAREN -> Ok (parser, tree)
-    | _                 -> Or_error.error_string "Parse alternative: unknown token"
+    | _                 -> error_invalid_token_option "Parse alternative" parser.current
   in
   let%bind parser, tree = parse_alternative_aux parser tree in
   let%bind tree         = return_group tree                 in
   parse_repeater parser tree
 
-and parse_literal parser =
+and parse_literal ?(allow_repeater = true) ?(allow_dot = true) parser =
   let%bind parser, tree = match parser.current with
-  | Some Token.LITERAL c -> Ok (parser, Ast.LITERAL (Some c))
-  | Some Token.DOT       -> Ok (parser, Ast.LITERAL None)
-  | _                    -> Or_error.error_string "Parse literal: unknown token"
+  | Some Token.LITERAL c          -> Ok (parser, Ast.LITERAL (Ast.SINGLE c))
+  | Some Token.DOT when allow_dot -> Ok (parser, Ast.LITERAL Ast.ANY)
+  | _                             -> Or_error.error_string ("Parse literal - illegal token: " ^ (Token.to_string_option parser.current))
   in
-  parse_repeater parser tree
+  match allow_repeater with
+  | true  -> parse_repeater parser tree
+  | false -> Ok (parser, tree)
 
 and parse_repeater parser tree =
-  let parser_repeater_aux parser =
+  let parse_repeater_aux parser =
     match parser.current with
     | Some Token.STAR   -> Ok (parser, Ast.REPEATER (tree, { l = Some 0
                                                            ; r = None }))
@@ -170,10 +201,10 @@ and parse_repeater parser tree =
     | Some Token.LCLAM  ->
         let%bind _ = expect_token parser Token.RCLAM in
         parse_clam_repeater (advance parser) tree
-    | _                 -> Or_error.error_string "Parse repeater: unknown token"
+    | _                 -> error_invalid_token_option "Parse repeater" parser.current
   in
   match is_current_token_repeater (advance parser) with
-  | true  -> parser_repeater_aux (advance parser)
+  | true  -> parse_repeater_aux (advance parser)
   | false -> Ok (parser, tree)
 
 and parse_clam_repeater parser tree =
@@ -191,7 +222,7 @@ and parse_clam_repeater parser tree =
     | Some Token.RCLAM     ->
         let%bind tree           = normalize_clam_repeater tree       in
         Ok (parser, tree)
-    | _                    -> Or_error.error_string "Parse clam repeater: unknown token"
+    | _                    -> error_invalid_token_option "Parse clam repeater" parser.current
   in
   parse_clam_repeater_aux parser tree
 
@@ -214,12 +245,60 @@ and parse_number parser =
         end
     | Some Token.RCLAM
     | Some Token.COMMA     -> Ok (parser, digits)
-    | _                    -> Or_error.error_string "Parse number: unknown token"
+    | _                    -> error_invalid_token_option "Parse number" parser.current
   in
   let%bind parser, digits = parse_number_aux (skip_whitespaces parser) [] in
   let%bind number         = digits_to_number digits    in
   Ok (parser, number)
- 
+
+and parse_char_alternative parser =
+  let tree = Ast.ALTERNATIVE [] in
+  let rec lookup_for_dash parser tree =
+    let dist = when_to_expect_token parser Token.DASH in
+    match dist with
+    | 1 -> 
+        let%bind parser, tree_part = parse_range parser                    in
+        let%bind tree              = add_ast_to_alternative tree tree_part in
+        lookup_for_dash (advance parser) tree
+    | _ -> parse_char_alternative_aux parser tree
+  and parse_char_alternative_aux parser tree =
+    match parser.current with
+    | Some Token.LITERAL _ ->
+        let%bind parser, c = parse_literal ~allow_repeater:false ~allow_dot:false parser in
+        let%bind tree      = add_ast_to_alternative tree c                               in
+        lookup_for_dash (advance parser) tree
+    | Some Token.RBRACE    -> Ok (parser, tree)
+    | _                    -> error_invalid_token_option "Parse char alternative" parser.current
+  in
+  let%bind parser, tree = lookup_for_dash parser tree in
+  let%bind tree         = return_group tree           in
+  parse_repeater parser tree
+
+and parse_range parser =
+  let data = (None, None) in
+  let compose_range data =
+    match data with
+    | Some c1, Some c2 when Char.to_int c1 <= Char.to_int c2 -> Ok (Ast.LITERAL (Ast.RANGE (c1, c2)))
+    | Some _ , Some _  -> Or_error.error_string "Range: first char is greater then the second"
+    | _                -> Or_error.error_string "compose_range: range not compleded!"
+  in
+  let rec parse_range_aux parser data =
+    match parser.current with
+    | Some Token.LITERAL c ->
+        let%bind data, next = add_char_to_range_data data c in
+        begin match next with
+        | true  -> parse_range_aux (advance parser) data
+        | false -> Ok (parser, data)
+        end
+    | Some Token.DASH      ->
+        let%bind _ = range_is_dash_legal data in
+        parse_range_aux (advance parser) data
+    | _                    -> error_invalid_token_option "Parse range" parser.current
+  in
+  let%bind parser, data = parse_range_aux parser data in
+  let%bind tree         = compose_range data          in
+  Ok (parser, tree)
+
 let parse_einv parser =
   let result = parse_group parser in
   match result with

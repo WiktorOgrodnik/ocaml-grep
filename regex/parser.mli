@@ -13,23 +13,23 @@ val find_infix_same_nesting_level : t -> Token.t option Or_error.t
 val is_current_token_repeater     : t -> bool
 val expect_token                  : t -> Token.t -> t Or_error.t
 
-val add_ast_to_sequence    : Ast.group -> Ast.group -> Ast.group Or_error.t
-val add_ast_to_alternative : Ast.group -> Ast.group -> Ast.group Or_error.t
-val add_number_to_repeater : Ast.group -> int -> Ast.group Or_error.t
+val add_ast_to_sequence    : Ast.t -> Ast.t -> Ast.t Or_error.t
+val add_ast_to_alternative : Ast.t -> Ast.t -> Ast.t Or_error.t
+val add_number_to_repeater : Ast.t -> int -> Ast.t Or_error.t
 
-val repeater_is_comma_legal : Ast.group -> unit Or_error.t
+val repeater_is_comma_legal : Ast.t -> unit Or_error.t
 
-val normalize_clam_repeater : Ast.group -> Ast.group Or_error.t
-val return_group            : Ast.group -> Ast.group Or_error.t
+val normalize_clam_repeater : Ast.t -> Ast.t Or_error.t
+val return_group            : Ast.t -> Ast.t Or_error.t
 val skip_whitespaces        : t -> t
 
-val parse_group         : t -> (t * Ast.group) Or_error.t
-val parse_sequence      : t -> bool -> (t * Ast.group) Or_error.t
-val parse_alternative   : t -> (t * Ast.group) Or_error.t
-val parse_literal       : t -> (t * Ast.group) Or_error.t
-val parse_repeater      : t -> Ast.group -> (t * Ast.group) Or_error.t
-val parse_clam_repeater : t -> Ast.group -> (t * Ast.group) Or_error.t
+val parse_group         : t -> (t * Ast.t) Or_error.t
+(* val parse_sequence      : t -> bool -> (t * Ast.t) Or_error.t *)
+val parse_alternative   : t -> (t * Ast.t) Or_error.t
+(* val parse_literal       : t -> ?allow_repeater:bool -> ?allow_dot:bool -> (t * Ast.t) Or_error.t *)
+val parse_repeater      : t -> Ast.t -> (t * Ast.t) Or_error.t
+val parse_clam_repeater : t -> Ast.t -> (t * Ast.t) Or_error.t
 val parse_number        : t -> (t * int) Or_error.t
 
-val parse_einv               : t -> Ast.group
-val parse                    : t -> Ast.group Or_error.t
+val parse_einv               : t -> Ast.t
+val parse                    : t -> Ast.t Or_error.t

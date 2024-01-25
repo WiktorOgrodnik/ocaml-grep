@@ -1,8 +1,6 @@
 (library
  (name regex)
- (libraries 
-   core
-   str)
+ (libraries core)
  (inline_tests)
  (preprocess
-  (pps ppx_jane ppx_deriving.eq)))
+  (pps ppx_jane)))

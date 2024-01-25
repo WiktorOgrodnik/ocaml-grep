@@ -1,16 +1,22 @@
 open! Core
 
-type group = (* -- Expression*)
+type t = (* -- Expression*)
 | INVALID (* -- Return when error detected *)
-| SEQUENCE of group list
-| ALTERNATIVE of group list
-| LITERAL of char option
-| REPEATER of group * repeating
+| SEQUENCE of t list
+| ALTERNATIVE of t list
+| LITERAL of literal
+| REPEATER of t * repeating
 [@@deriving sexp_of]
 
 and repeating = { l : int option
                 ; r : int option
                 }
+[@@deriving sexp_of]
+
+and literal =
+| SINGLE of char
+| RANGE  of char * char
+| ANY
 [@@deriving sexp_of]
 
 let s_of_sint i =
@@ -19,11 +25,17 @@ let s_of_sint i =
   | Some i -> string_of_int i
 
 let rec to_string ast =
+  let to_string_literal lit =
+    match lit with
+    | SINGLE c     -> String.make 1 c
+    | ANY          -> "ANY"
+    | RANGE (l, r) -> "RANGE from " ^ String.make 1 l ^ " to " ^ String.make 1 r
+  in
   match ast with
   | INVALID            -> "INVALID"
   | SEQUENCE     xs    -> "SEQUENCE of ("    ^ String.concat ~sep:", " (List.map ~f:to_string xs) ^ ")"
   | ALTERNATIVE  xs    -> "ALTERNATIVE of (" ^ String.concat (List.map ~f:to_string xs) ^ ")"
-  | LITERAL      c     -> "LITERAL of " ^ (match c with None -> "?" | Some c -> String.make 1 c)
+  | LITERAL      c     -> to_string_literal c
   | REPEATER    (t, r) -> "REPEATER of " ^ to_string t ^ "(from: " ^ s_of_sint r.l ^ ", to: " ^ s_of_sint r.r ^ ")"
 
 let seq_get_elt seq =

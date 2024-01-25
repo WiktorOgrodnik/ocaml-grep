@@ -24,14 +24,19 @@ let rec search_ast text pattern position =
   | _             -> Choice.fail (* Temp *)
 
 and search_literal text pattern position =
+  let in_bounds chars =
+    let ints = List.map chars ~f:Char.to_int in
+    List.is_sorted ints ~compare:(fun a b -> a - b)
+  in
   if position >= String.length text then Choice.fail
   else
     let ch = String.get text position in
     let (=) = Char.equal              in
     match pattern with
-    | LITERAL (Some c) when c = ch -> Choice.return position
-    | LITERAL None                 -> Choice.return position
-    | _                            -> Choice.fail
+    | LITERAL (RANGE (a, b)) when in_bounds [a; ch; b] -> Choice.return position
+    | LITERAL (SINGLE c) when c = ch                   -> Choice.return position
+    | LITERAL ANY                                      -> Choice.return position
+    | _                                                -> Choice.fail
 
 and search_sequence text pattern position =
   let rec search_aux pattern position =

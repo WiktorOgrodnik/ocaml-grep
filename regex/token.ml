@@ -11,15 +11,16 @@ type t =
 (* -- Brackets*)
 | LPAREN
 | RPAREN
-(* | LBRACE *)
-(* | RBRACE *)
+| LBRACE
+| RBRACE
 | LCLAM
 | RCLAM
 (* -- Others*)
 | COMMA
-[@@deriving sexp_of, eq]
+| DASH
+[@@deriving sexp_of]
 
-let string_of_token = function
+let to_string = function
   | LITERAL c -> "LITERAL (" ^ String.make 1 c ^ ")"
   | DOT       -> "DOT"
   | OR        -> "OR"
@@ -28,11 +29,17 @@ let string_of_token = function
   | QMARK     -> "QMRARK"
   | LPAREN    -> "LPAREN"
   | RPAREN    -> "RPAREN"
-  (* | LBRACE    -> "LBRACE" *)
-  (* | RBRACE    -> "RBRACE" *)
+  | LBRACE    -> "LBRACE"
+  | RBRACE    -> "RBRACE"
   | LCLAM     -> "LCLAM"
   | RCLAM     -> "RCLAM"
   | COMMA     -> "COMMA"
+  | DASH      -> "DASH"
+
+let to_string_option token =
+  match token with
+  | Some token -> to_string token
+  | None       -> "(No token)!"
 
 let eq a b =
   match a, b with
@@ -43,8 +50,11 @@ let eq a b =
   | QMARK, QMARK
   | LPAREN, LPAREN
   | RPAREN, RPAREN
+  | LBRACE, LBRACE
+  | RBRACE, RBRACE
   | LCLAM, LCLAM
   | RCLAM, RCLAM
-  | COMMA, COMMA -> true
+  | COMMA, COMMA
+  | DASH, DASH -> true
   | LITERAL c1, LITERAL c2 when int_of_char c1 = int_of_char c2 -> true
   | _ -> false

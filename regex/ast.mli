@@ -1,11 +1,11 @@
 open! Core
 
-type group = (* -- Expression*)
+type t = (* -- Expression*)
 | INVALID (* -- Return when error detected *)
-| SEQUENCE of group list
-| ALTERNATIVE of group list
-| LITERAL of char option
-| REPEATER of group * repeating
+| SEQUENCE of t list
+| ALTERNATIVE of t list
+| LITERAL of literal
+| REPEATER of t * repeating
 [@@deriving sexp_of]
 
 and repeating = { l : int option
@@ -13,5 +13,11 @@ and repeating = { l : int option
                 }
 [@@deriving sexp_of]
 
-val to_string   : group -> string
-val seq_get_elt : group -> (group * group) option
+and literal =
+| SINGLE of char
+| RANGE  of char * char
+| ANY
+[@@deriving sexp_of]
+
+val to_string   : t -> string
+val seq_get_elt : t -> (t * t) option
