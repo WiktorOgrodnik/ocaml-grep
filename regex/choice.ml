@@ -14,3 +14,5 @@ let fail    = Sequence.empty
 let flip    = Sequence.of_list [true; false]
 let flipn n = Sequence.range 0 n
 let run m   = m
+
+let ( >>= ) = bind
