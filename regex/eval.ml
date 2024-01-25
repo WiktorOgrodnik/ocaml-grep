@@ -1,7 +1,14 @@
 open Core
 open Ast
 
-let (let*  ) = Choice.bind
+let (let*  ) = StateT.bind
+
+type state = 
+  { text : string
+  ; pos  : int}
+
+let init text pos =
+  StateT.set { text = text; pos = pos }
 
 let select_from_alt ast =
   match ast with
@@ -15,15 +22,16 @@ let select_from_alt ast =
       end
   | _               -> Choice.fail 
 
-let rec search_ast text pattern position =
+let rec search_ast pattern =
   match pattern with
-  | LITERAL     _ -> search_literal  text pattern position
-  | SEQUENCE    _ -> search_sequence text pattern position
-  | ALTERNATIVE _ -> search_alt      text pattern position
-  | REPEATER    _ -> search_repeater text pattern position
-  | _             -> Choice.fail (* Temp *)
+  | LITERAL     _ -> search_literal  pattern
+  | SEQUENCE    _ -> search_sequence pattern
+  | ALTERNATIVE _ -> search_alt      pattern
+  | REPEATER    _ -> search_repeater pattern
+  | _             -> StateT.return Choice.fail
 
-and search_literal text pattern position =
+and search_literal pattern =
+  let* bind 
   if position >= String.length text then Choice.fail
   else
     let ch = String.get text position in
@@ -71,11 +79,15 @@ and search_repeater text pattern position =
   in
   search_aux position 0
 
+let search_start text pattern position =
+  let* _ = init text position in
+  search_ast pattern
+
 let search text pattern =
   let rec search_aux pos xs =
     if pos >= String.length text then xs
     else
-      let res = search_ast text pattern pos in
+      let res = search_start text pattern pos in
       match Sequence.max_elt res ~compare:(Int.compare) with
       | None                -> search_aux (pos + 1) xs
       | Some t when t < pos -> search_aux (pos + 1) ((-1, -1) :: xs)
