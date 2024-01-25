@@ -17,10 +17,8 @@
 
 (package
  (name ogrep)
- (synopsis "A short synopsis")
- (description "A longer description")
- (depends ocaml dune)
- (tags
-  (topics "to describe" your project)))
+ (synopsis "grep")
+ (description "Search your regex patterns")
+ (depends ocaml dune core ppx_jane ANSITerminal))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
