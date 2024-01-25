@@ -6,6 +6,7 @@ type t = (* -- Expression*)
 | ALTERNATIVE of t list
 | LITERAL of literal
 | REPEATER of t * repeating
+| NEGATION of t
 [@@deriving sexp_of]
 
 and repeating = { l : int option

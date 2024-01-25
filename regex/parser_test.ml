@@ -31,7 +31,10 @@ let examples = Array.of_list
 ; "pt[abc]{5}"
 ; "a?"
 ; "abc{3,4}[0-9]"
-; "abc[d-z]"]
+; "abc[d-z]"
+; "[^ty]"
+; "a[^0-9]{2}"
+; "(tylko[^ae-fz])?"]
 
 ;;
 
@@ -305,3 +308,29 @@ print_s [%sexp (result : Ast.t)];
   (SEQUENCE
    ((LITERAL (SINGLE a)) (LITERAL (SINGLE b)) (LITERAL (SINGLE c))
     (LITERAL (RANGE d z)))) |}]
+
+let%expect_test "parse_neg1_[^ty]" =
+let result = test_parse_common 31 in
+print_s [%sexp (result : Ast.t)];
+[%expect{| (NEGATION (ALTERNATIVE ((LITERAL (SINGLE t)) (LITERAL (SINGLE y))))) |}]
+
+let%expect_test "parse_neg2_a[^0-9]{2}" =
+let result = test_parse_common 32 in
+print_s [%sexp (result : Ast.t)];
+[%expect{|
+  (SEQUENCE
+   ((LITERAL (SINGLE a))
+    (REPEATER (NEGATION (LITERAL (RANGE 0 9))) ((l (2)) (r (2)))))) |}]
+
+let%expect_test "parse_neg3_(tylko[^ae-fz])?" =
+let result = test_parse_common 33 in
+print_s [%sexp (result : Ast.t)];
+[%expect{|
+  (REPEATER
+   (SEQUENCE
+    ((LITERAL (SINGLE t)) (LITERAL (SINGLE y)) (LITERAL (SINGLE l))
+     (LITERAL (SINGLE k)) (LITERAL (SINGLE o))
+     (NEGATION
+      (ALTERNATIVE
+       ((LITERAL (SINGLE a)) (LITERAL (RANGE e f)) (LITERAL (SINGLE z)))))))
+   ((l (0)) (r (1)))) |}]

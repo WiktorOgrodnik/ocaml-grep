@@ -18,6 +18,7 @@ type t =
 (* -- Other *)
 | COMMA
 | DASH
+| CARET
 [@@deriving sexp_of]
 
 val to_string        : t -> string

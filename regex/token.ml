@@ -18,6 +18,7 @@ type t =
 (* -- Others*)
 | COMMA
 | DASH
+| CARET
 [@@deriving sexp_of]
 
 let to_string = function
@@ -35,6 +36,7 @@ let to_string = function
   | RCLAM     -> "RCLAM"
   | COMMA     -> "COMMA"
   | DASH      -> "DASH"
+  | CARET     -> "CARET"
 
 let to_string_option token =
   match token with
@@ -55,6 +57,7 @@ let eq a b =
   | LCLAM, LCLAM
   | RCLAM, RCLAM
   | COMMA, COMMA
-  | DASH, DASH -> true
+  | DASH, DASH
+  | CARET, CARET -> true
   | LITERAL c1, LITERAL c2 when int_of_char c1 = int_of_char c2 -> true
   | _ -> false

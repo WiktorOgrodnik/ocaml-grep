@@ -6,6 +6,7 @@ type t = (* -- Expression*)
 | ALTERNATIVE of t list
 | LITERAL of literal
 | REPEATER of t * repeating
+| NEGATION of t
 [@@deriving sexp_of]
 
 and repeating = { l : int option
@@ -37,8 +38,10 @@ let rec to_string ast =
   | ALTERNATIVE  xs    -> "ALTERNATIVE of (" ^ String.concat (List.map ~f:to_string xs) ^ ")"
   | LITERAL      c     -> to_string_literal c
   | REPEATER    (t, r) -> "REPEATER of " ^ to_string t ^ "(from: " ^ s_of_sint r.l ^ ", to: " ^ s_of_sint r.r ^ ")"
+  | NEGATION     t     -> "NEGATION of (" ^ to_string t ^ ")"
 
 let seq_get_elt seq =
   match seq with
-  | SEQUENCE (h :: tl) -> Some (h, SEQUENCE tl)
-  | _                  -> None
+  | SEQUENCE (h :: tl)    -> Some (h, SEQUENCE tl)
+  | ALTERNATIVE (h :: tl) -> Some (h, ALTERNATIVE tl)
+  | _                     -> None

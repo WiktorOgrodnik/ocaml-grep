@@ -3,6 +3,10 @@ open Ast
 
 let (let* ) = Choice.bind
 
+type state =
+  { text  : string
+  ; logic : bool }
+
 let select_from_alt ast =
   match ast with
   | ALTERNATIVE lst ->
@@ -13,53 +17,65 @@ let select_from_alt ast =
       | Some t -> Choice.return t
       | None   -> Choice.fail
       end
-  | _               -> Choice.fail 
+  | _               -> Choice.fail
 
-let rec search_ast text pattern position =
+let rec search_success state pos =
+  match state.logic with
+  | true  -> Choice.return pos
+  | false -> Choice.fail
+
+and search_failure state pos =
+  search_success { state with logic = not state.logic } pos
+
+and search_ast pattern state pos =
   match pattern with
-  | LITERAL     _ -> search_literal  text pattern position
-  | SEQUENCE    _ -> search_sequence text pattern position
-  | ALTERNATIVE _ -> search_alt      text pattern position
-  | REPEATER    _ -> search_repeater text pattern position
-  | _             -> Choice.fail (* Temp *)
+  | LITERAL     _ -> search_literal  pattern state pos
+  | SEQUENCE    _ -> search_sequence pattern state pos 
+  | ALTERNATIVE _ -> search_alt      pattern state pos
+  | REPEATER    _ -> search_repeater pattern state pos
+  | NEGATION    _ -> search_negation pattern state pos
+  | INVALID       -> Choice.fail (* always fail - Invalid *)
 
-and search_literal text pattern position =
+and search_literal pattern state pos =
   let in_bounds chars =
     let ints = List.map chars ~f:Char.to_int in
     List.is_sorted ints ~compare:(fun a b -> a - b)
   in
-  if position >= String.length text then Choice.fail
+  if pos >= String.length state.text then Choice.fail 
   else
-    let ch = String.get text position in
+    let ch = String.get state.text pos in
     let (=) = Char.equal              in
     match pattern with
-    | LITERAL (RANGE (a, b)) when in_bounds [a; ch; b] -> Choice.return position
-    | LITERAL (SINGLE c) when c = ch                   -> Choice.return position
-    | LITERAL ANY                                      -> Choice.return position
-    | _                                                -> Choice.fail
+    | LITERAL (RANGE (a, b)) when in_bounds [a; ch; b] -> search_success state pos
+    | LITERAL (SINGLE c) when c = ch                   -> search_success state pos
+    | LITERAL ANY                                      -> search_success state pos
+    | _                                                -> search_failure state pos
 
-and search_sequence text pattern position =
-  let rec search_aux pattern position =
+and search_sequence ?(modifier = 1) pattern state pos =
+  let rec search_aux pattern pos =
     match Ast.seq_get_elt pattern with
     | Some (h, tl) ->
-        let* position = search_ast text h position in
-        search_aux tl (position + 1)
+        let* pos = search_ast h state pos in
+        search_aux tl (pos + modifier)
     | None         ->
-        Choice.return (position - 1)
+        Choice.return (pos - modifier)
   in
-  search_aux pattern position
+  search_aux pattern pos
 
-and search_alt text pattern position =
-  let* pattern = select_from_alt pattern in
-  search_ast text pattern position
+and search_alt pattern state pos =
+  if state.logic then
+    let* pattern = select_from_alt pattern in
+    search_ast pattern state pos
+  else
+    search_sequence ~modifier:0 pattern state pos
 
-and search_repeater text pattern position =
+and search_repeater pattern state pos =
   let some_or v o =
     match v with
     | Some v -> v
     | None   -> o
   in
-  let rec search_aux position rep =
+  let rec search_aux pos rep =
     match pattern with
     | REPEATER (t, r) ->
         let left_bound  = some_or r.l 0                            in
@@ -67,20 +83,25 @@ and search_repeater text pattern position =
         let cond        = rep >= left_bound && rep <= right_bound  in
         let* flip       = Choice.flipn 2 in
         begin match flip with
-        | 0 -> if cond then Choice.return (position - 1) else Choice.fail
+        | 0 -> if cond then search_success state (pos - 1) else search_failure state (pos - 1)
         | _ ->
-          let* position   = search_ast text t position in
-          search_aux (position + 1) (rep + 1)
+          let* pos   = search_ast t state pos in
+          search_aux (pos + 1) (rep + 1)
         end
     | _ -> Choice.fail
   in
-  search_aux position 0
+  search_aux pos 0
+
+and search_negation pattern state pos =
+  match pattern with
+  | NEGATION t -> search_ast t { state with logic = not state.logic } pos
+  | _          -> Choice.fail
 
 let search text pattern =
   let rec search_aux pos xs =
     if pos >= String.length text then xs
     else
-      let res = search_ast text pattern pos in
+      let res = search_ast pattern { text = text; logic = true } pos in
       match Sequence.max_elt res ~compare:(Int.compare) with
       | None                -> search_aux (pos + 1) xs
       | Some t when t < pos -> search_aux (pos + 1) ((-1, -1) :: xs)

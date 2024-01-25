@@ -114,7 +114,7 @@ let range_is_dash_legal data =
   | Some _, None -> Ok (())
   | _            -> Or_error.error_string "To many dashes in one range"
 
-let return_group sequence =
+let rec return_group sequence =
   match sequence with
   | Ast.ALTERNATIVE lst
   | Ast.SEQUENCE    lst -> begin match lst with
@@ -122,6 +122,9 @@ let return_group sequence =
     | x :: []           -> Ok x
     | _                 -> Ok sequence
     end
+  | Ast.NEGATION t      -> 
+      let%bind t = return_group t in
+      Ok (Ast.NEGATION t)
   | _                   -> Or_error.error_string "Return group: expected Ast.SEQUENCE or Ast.ALTERNATIVE"
 
 let rec skip_whitespaces parser =
@@ -253,7 +256,14 @@ and parse_number parser =
 
 and parse_char_alternative parser =
   let tree = Ast.ALTERNATIVE [] in
-  let rec lookup_for_dash parser tree =
+  let rec lookup_for_caret parser tree =
+    match parser.current with
+    | Some Token.CARET ->
+        let%bind parser, tree = lookup_for_dash (advance parser) tree in
+        let tree              = Ast.NEGATION tree                     in
+        Ok (parser, tree)
+    | _ -> lookup_for_dash parser tree
+  and lookup_for_dash parser tree =
     let dist = when_to_expect_token parser Token.DASH in
     match dist with
     | 1 -> 
@@ -270,7 +280,7 @@ and parse_char_alternative parser =
     | Some Token.RBRACE    -> Ok (parser, tree)
     | _                    -> error_invalid_token_option "Parse char alternative" parser.current
   in
-  let%bind parser, tree = lookup_for_dash parser tree in
+  let%bind parser, tree = lookup_for_caret parser tree in
   let%bind tree         = return_group tree           in
   parse_repeater parser tree
 
