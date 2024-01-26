@@ -11,7 +11,7 @@ let select_from_alt ast =
   match ast with
   | ALTERNATIVE lst ->
       let  n  = List.length lst in
-      let* a  = Choice.flipn n      in
+      let* a  = Choice.flipn n  in
       let elt = List.nth lst a  in
       begin match elt with 
       | Some t -> Choice.return t

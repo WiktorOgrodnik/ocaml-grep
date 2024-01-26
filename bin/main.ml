@@ -37,10 +37,8 @@ let grep_main chn process pattern =
   let rec rl () =
     match In_channel.input_line chn with
     | Some line -> 
-      begin match Regex.search line process pattern with
-      | Ok _ -> rl ()
-      | Error err -> print_endline (Error.to_string_hum err)
-      end
+      Regex.search line process pattern;
+      rl ()
     | None      -> In_channel.close chn
   in rl ()
 
@@ -87,4 +85,8 @@ let () =
 
   match pattern with
   | None -> ()
-  | Some pattern -> main_aux pattern files_m
+  | Some pattern ->
+      begin match Regex.compile pattern with
+      | Ok pattern   -> main_aux pattern files_m
+      | Error err    -> print_endline (Error.to_string_hum err)
+      end

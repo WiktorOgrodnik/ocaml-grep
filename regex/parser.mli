@@ -32,4 +32,4 @@ val parse_clam_repeater : t -> Ast.t -> (t * Ast.t) Or_error.t
 val parse_number        : t -> (t * int) Or_error.t
 
 val parse_einv               : t -> Ast.t
-val parse                    : t -> Ast.t Or_error.t
+val parse                    : Token.t list -> Ast.t Or_error.t

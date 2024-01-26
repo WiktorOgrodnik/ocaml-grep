@@ -317,7 +317,8 @@ let parse_einv parser =
     print_endline (Error.to_string_hum err);
     Ast.INVALID
 
-let parse parser =
+let parse tokens =
+  let parser = init tokens in 
   match parser.current with
   | None   -> Or_error.error_string "Empty pattern!"
   | Some _ ->

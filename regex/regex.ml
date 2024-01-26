@@ -1,12 +1,11 @@
 open! Core
-open  Or_error.Let_syntax
 
+let compile pattern =
+  let tokens = Lexer.gen_tokens pattern in
+  Parser.parse tokens
 
-let search line handler pattern =
-  let tokens        = Lexer.gen_tokens pattern  in
-  let parser        = Parser.init tokens        in
-  let%bind ast_tree = Parser.parse parser       in
-  let res           = Eval.search line ast_tree in
+let search line handler compiled_pattern =
+  let res           = Eval.search line compiled_pattern in
   match res with
-  | _ :: _ -> handler line res; Ok ()
-  | []     -> Ok ()
+  | _ :: _ -> handler line res
+  | []     -> ()

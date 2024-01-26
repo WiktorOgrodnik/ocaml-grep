@@ -1,3 +1,4 @@
 open Core
 
-val search: string -> (string -> (int * int) list -> unit) -> string -> unit Or_error.t
+val compile: string -> Ast.t Or_error.t
+val search: string -> (string -> (int * int) list -> unit) -> Ast.t -> unit
